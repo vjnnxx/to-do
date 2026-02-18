@@ -1,0 +1,50 @@
+services:
+  todo_app:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: mysql+pymysql://root_user:root@db:3306/todo_app_db
+      # Or use individual variables
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root_user
+      DB_PASSWORD: root
+      DB_NAME: todo_app_db
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./app:/code/app/
+    networks:
+      - deploy_todo_app
+    ports:
+      - 8000:8000
+  
+  db:
+    image: mysql:8.4
+    container_name: mysql_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: todo_app_db
+      MYSQL_USER: root_user
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports: 
+      - 3306:3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - deploy_todo_app
+
+networks:
+  deploy_todo_app:
+      driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
