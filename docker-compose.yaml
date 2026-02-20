@@ -19,7 +19,7 @@ services:
     networks:
       - deploy_todo_app
     ports:
-      - 8000:8000
+      - 8000:80
   
   db:
     image: mysql:8.4
