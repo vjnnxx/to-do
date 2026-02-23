@@ -18,8 +18,9 @@ services:
       - ./app:/code/app/
     networks:
       - deploy_todo_app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - 8000:80
+      - 8000:8000
   
   db:
     image: mysql:8.4

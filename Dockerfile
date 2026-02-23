@@ -16,4 +16,4 @@ COPY ./app /code/app
 COPY ./database /code/database
 
 
-CMD ["fastapi", "run", "app/main.py", "--port", "80"]
+CMD ["fastapi", "run", "app/main.py", "--port", "8000"]
