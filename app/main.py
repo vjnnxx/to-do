@@ -4,8 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 from database.database import engine, get_db, Base
 from datetime import datetime
-from database.models import Task
-import json
+from database.models import Task, Subtask
 
 app = FastAPI()
 
@@ -13,12 +12,12 @@ app = FastAPI()
 class TaskModel(BaseModel):
     title: str
     description: str | None = None
-    subtasks: dict | None = None
+    subtasks: list | None = None
     created_at: datetime | None = None
     update_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
 
-# Create tables
+# Cria tabelas
 Base.metadata.create_all(bind=engine)
 
 @app.get("/")
@@ -28,7 +27,7 @@ async def root():
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     try:
-        # Test database connection
+        # VEricando conexão com banco de dados
         db.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
@@ -42,6 +41,13 @@ async def create_task(task: TaskModel, status_code = status.HTTP_201_CREATED):
             new_task = Task(title=task.title, description=task.description,)
             session.add(new_task)
             session.commit()
+
+            #Cria subtarefas relacionadas à tarefa criada
+            for subtask in task.subtasks:
+                new_subtask = Subtask(task_id=new_task.id, title=subtask)
+                session.add(new_subtask)
+                session.commit()
+
         return {"message": "Tarefa criada com sucesso!"}
     except Exception as e:
         print(e)
