@@ -5,4 +5,8 @@ sqlalchemy==2.0.38
 pymysql==1.1.0
 cryptography==42.0.0
 python-dotenv==1.0.0
+pyjwt==2.0.1
+pwdlib[argon2]==0.3.0
+pwdlib==0.3.0
+python-dotenv>=1.0.0
 
