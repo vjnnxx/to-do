@@ -107,7 +107,23 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 # Cria tabelas
 Base.metadata.create_all(bind=engine)
 
-@app.post("/token")
+@app.post("/register")
+async def register(user: UserModel, status_code = status.HTTP_201_CREATED):
+    existing_user = get_user(user.username)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Usuário já existe!")
+    try:
+        with Session(engine) as session:
+            hashed_password = password_hash.hash(user.password)
+            new_user = User(username=user.username, password=hashed_password)
+            session.add(new_user)
+            session.commit()
+        return {"message": "Usuário registrado com sucesso!"}
+    except Exception as e:
+        print(e)
+        return {"Erro": "Algo deu errado"}
+
+@app.post("/login")
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> TokenModel:
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
