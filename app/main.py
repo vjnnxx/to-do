@@ -4,6 +4,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import os
 import dotenv
 import jwt
+from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
 from datetime import datetime, timedelta, timezone
 
@@ -34,6 +35,9 @@ class UserModel(BaseModel):
 class TokenModel(BaseModel):
     access_token: str
     token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None
 
 class TaskModel(BaseModel):
     title: str
@@ -67,7 +71,6 @@ def create_access_token(data: dict, expires_delta: timedelta | None):
     return encoded_jwt
 
 
-
 def authenticate_user(username: str, password: str):
     user = get_user(username)
     if not user:
@@ -77,8 +80,29 @@ def authenticate_user(username: str, password: str):
     return user
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
-    user = fake_decode_token(token)
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Não foi possível validar as credenciais",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except InvalidTokenError:
+        raise credentials_exception
+    user = get_user(username)
+    if user is None:
+        raise credentials_exception
     return user
+
+# async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
+#     if current_user.disabled:
+#         raise HTTPException(status_code=400, detail="Inactive user")
+#     return current_user
 
 # Cria tabelas
 Base.metadata.create_all(bind=engine)
