@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 import os
+from pathlib import Path
 import dotenv
 import jwt
 from jwt.exceptions import InvalidTokenError
@@ -92,12 +93,12 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-    except InvalidTokenError:
+    except InvalidTokenError as e:
         raise credentials_exception
-    user = get_user(username)
+    user = get_user(token_data.username)
     if user is None:
         raise credentials_exception
-    return user
+    return {"id": user.id, "username": user.username}
 
 # async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
 #     if current_user.disabled:
@@ -159,10 +160,10 @@ def health_check(db: Session = Depends(get_db)):
 
 # Criar nova tarefa
 @app.put("/create-task")
-async def create_task(task: TaskModel, status_code = status.HTTP_201_CREATED):
+async def create_task(task: TaskModel, current_user: Annotated[UserModel, Depends(get_current_user)], status_code = status.HTTP_201_CREATED):
     try:
-        with Session(engine) as session:
-            new_task = Task(title=task.title, description=task.description,)
+        with Session(engine, expire_on_commit=False) as session:
+            new_task = Task(title=task.title, description=task.description, user_id=current_user["id"])
             session.add(new_task)
             session.commit()
 
@@ -171,7 +172,7 @@ async def create_task(task: TaskModel, status_code = status.HTTP_201_CREATED):
                 new_subtask = Subtask(task_id=new_task.id, title=subtask)
                 session.add(new_subtask)
                 session.commit()
-
+            
         return {"message": "Tarefa criada com sucesso!", "ID da tarefa": new_task.id}
     except Exception as e:
         print(e)
