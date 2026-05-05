@@ -48,10 +48,6 @@ class TaskModel(BaseModel):
     update_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
 
-# def fake_decode_token(token):
-#     return UserModel(
-#         username=token + "fakedecoded", email="john@example.com", full_name="John Doe"
-#     )
 def get_user(username: str):
     with Session(engine) as session:
         result = session.query(User).filter_by(username=username).first()
@@ -100,11 +96,6 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         raise credentials_exception
     return {"id": user.id, "username": user.username}
 
-# async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
-#     if current_user.disabled:
-#         raise HTTPException(status_code=400, detail="Inactive user")
-#     return current_user
-
 # Cria tabelas
 Base.metadata.create_all(bind=engine)
 
@@ -138,7 +129,6 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return TokenModel(access_token=access_token, token_type="bearer")
-    ### Criar usuário
 
 
 @app.get("/users/me")
@@ -152,7 +142,7 @@ async def root(token: Annotated[str, Depends(oauth2_scheme)]):
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     try:
-        # VEricando conexão com banco de dados
+        # Verificando conexão com banco de dados
         db.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
@@ -181,8 +171,26 @@ async def create_task(task: TaskModel, current_user: Annotated[UserModel, Depend
 
 # Retornar nova tarefa pelo id
 @app.get("/task/{task_id}")
-async def get_task(task_id):
-    return {"task_id": task_id}
+async def get_task(task_id, current_user: Annotated[UserModel, Depends(get_current_user)]):
+    result = {}
+
+    with Session(engine) as session:
+        task = session.query(Task).filter_by(id=task_id).first()
+        if not task:
+            raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+
+        subtasks = session.query(Subtask).filter_by(task_id=task_id).all()
+        result.update({"task": task})
+        result.update({"subtasks": subtasks})
+
+    return {"result": result}
+
+
+@app.get("/tasks")
+async def get_tasks(current_user: Annotated[UserModel, Depends(get_current_user)]):
+    with Session(engine) as session:
+        tasks = session.query(Task).filter_by(user_id=current_user["id"]).all()
+        return {"tasks": tasks}
 
 #Editar uma tarefa
 @app.patch("/update-task/{task_id}")
