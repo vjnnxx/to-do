@@ -18,7 +18,7 @@ class Task(Base):
     title = Column(String(50), index=True)
     description = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
-    update_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Subtask(Base):
     __tablename__ = "subtasks"

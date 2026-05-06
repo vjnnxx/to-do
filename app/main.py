@@ -13,7 +13,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict
 
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import text
+from sqlalchemy.sql import text, update
 
 from database.database import engine, get_db, Base
 from datetime import datetime
@@ -47,6 +47,10 @@ class TaskModel(BaseModel):
     created_at: datetime | None = None
     update_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
+
+class updateTaskModel(BaseModel):
+    title: str | None = None
+    description: str | None = None
 
 def get_user(username: str):
     with Session(engine) as session:
@@ -194,8 +198,14 @@ async def get_tasks(current_user: Annotated[UserModel, Depends(get_current_user)
 
 #Editar uma tarefa
 @app.patch("/update-task/{task_id}")
-async def update_task(task: TaskModel, task_id):
-    return {"task": task, "task_id": task_id}
+async def update_task(task: updateTaskModel, task_id, current_user: Annotated[UserModel, Depends(get_current_user)]):
+    with Session(engine) as session:
+        if not session.query(Task).filter_by(id=task_id).first():
+            raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        
+        task = session.query(Task).filter_by(id=task_id).update({Task.title: task.title, Task.description: task.description})
+        session.commit()
+    return {"message": "Tarefa atualizada com sucesso!", "ID da tarefa": task_id}
 
 @app.delete("/delete-task/{task_id}")
 async def delete_task(task_id):
