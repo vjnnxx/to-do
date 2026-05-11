@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey
 from datetime import datetime
 from database.database import Base
 
@@ -19,6 +19,7 @@ class Task(Base):
     description = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed = Column(Boolean, default=False)
 
 class Subtask(Base):
     __tablename__ = "subtasks"

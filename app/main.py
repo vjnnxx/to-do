@@ -45,7 +45,7 @@ class TaskModel(BaseModel):
     description: str | None = None
     subtasks: list | None = None
     created_at: datetime | None = None
-    update_at: datetime | None = None
+    updated_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
 
 class updateTaskModel(BaseModel):
@@ -125,7 +125,7 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Usuário ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -207,6 +207,18 @@ async def update_task(task: updateTaskModel, task_id, current_user: Annotated[Us
         session.commit()
     return {"message": "Tarefa atualizada com sucesso!", "ID da tarefa": task_id}
 
+@app.patch("/complete-task/{task_id}")
+async def complete_task(task_id, current_user: Annotated[UserModel, Depends(get_current_user)]):
+    with Session(engine) as session:
+        if not session.query(Task).filter_by(id=task_id).first():
+            raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        
+        task = session.query(Task).filter_by(id=task_id).update({Task.completed: True})
+        session.commit()
+    return {"message": "Tarefa marcada como completa!", "ID da tarefa": task_id}
+
 @app.delete("/delete-task/{task_id}")
 async def delete_task(task_id):
     return {"message": f"Task {task_id} deleted"}
+
+# Criar novas rotas para atualizar e excluir subtarefas
