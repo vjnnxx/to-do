@@ -27,4 +27,5 @@ class Subtask(Base):
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
     title = Column(String(50), index=True)
+    completed = Column(Boolean, default=False)
 

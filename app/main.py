@@ -52,6 +52,10 @@ class updateTaskModel(BaseModel):
     title: str | None = None
     description: str | None = None
 
+class SubtaskModel(BaseModel):
+    title: str
+    model_config = ConfigDict(from_attributes=True)
+
 def get_user(username: str):
     with Session(engine) as session:
         result = session.query(User).filter_by(username=username).first()
@@ -221,4 +225,29 @@ async def complete_task(task_id, current_user: Annotated[UserModel, Depends(get_
 async def delete_task(task_id):
     return {"message": f"Task {task_id} deleted"}
 
-# Criar novas rotas para atualizar e excluir subtarefas
+@app.patch("/update-subtask/{subtask_id}")
+async def update_subtask(subtask: SubtaskModel, subtask_id, current_user: Annotated[UserModel, Depends(get_current_user)]):
+    with Session(engine) as session:
+        if not session.query(Subtask).filter_by(id=subtask_id).first():
+            raise HTTPException(status_code=404, detail="Subtarefa não encontrada")
+        
+        try:
+            session.query(Subtask).filter_by(id=subtask_id).update({Subtask.title: subtask.title})
+            session.commit()
+        except Exception as e:
+            print(e)
+            return {"Erro": "Não foi possível atualizar a subtarefa", "details": str(e)}  
+    return {"message": "Subtarefa atualizada com sucesso!", "ID da subtarefa": subtask_id}
+
+@app.delete("/delete-subtask/{subtask_id}")
+async def delete_subtask(subtask_id, current_user: Annotated[UserModel, Depends(get_current_user)]):
+    with Session(engine) as session:
+        if not session.query(Subtask).filter_by(id=subtask_id).first():
+            raise HTTPException(status_code=404, detail="Subtarefa não encontrada")
+        try:
+            session.query(Subtask).filter_by(id=subtask_id).delete()
+            session.commit()
+        except Exception as e:
+            print(e)
+            return {"Erro": "Não foi possível deletar a subtarefa", "details": str(e)}  
+    return {"message": "Subtarefa deletada com sucesso!", "ID da subtarefa": subtask_id}
